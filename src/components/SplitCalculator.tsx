@@ -236,7 +236,7 @@ const SplitCalculator = () => {
 
   return (
     <div className="min-h-screen bg-secondary p-4 pb-20">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 mt-40">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
