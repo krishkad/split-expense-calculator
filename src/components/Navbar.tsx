@@ -8,7 +8,7 @@ const Navbar = () => {
         <div className="">
           <Link href={"/"}>
             <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Secal
+              IOU LOL
             </h2>
           </Link>
         </div>
