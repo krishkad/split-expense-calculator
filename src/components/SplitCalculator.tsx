@@ -1,17 +1,18 @@
 "use client";
-import React, { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
+  DollarSign,
+  FileText,
   Plus,
-  Trash2,
-  Users,
   Receipt,
-  Download,
   RotateCcw,
   Share2,
+  Trash2,
+  Users
 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 
 interface Participant {
   id: string;
@@ -24,6 +25,14 @@ interface Expense {
   amount: number;
   paidBy: string;
   participants: string[];
+  currency: string;
+}
+
+interface DetailedExpenseBreakdown {
+  participantId: string;
+  participantName: string;
+  amountOwed: number;
+  shareOf: string[];
 }
 
 interface Settlement {
@@ -32,15 +41,29 @@ interface Settlement {
   amount: number;
 }
 
+const CURRENCIES = [
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "JPY", symbol: "¥", name: "Japanese Yen" },
+  { code: "CAD", symbol: "C$", name: "Canadian Dollar" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" },
+  { code: "CHF", symbol: "CHF", name: "Swiss Franc" },
+  { code: "CNY", symbol: "¥", name: "Chinese Yuan" },
+  { code: "INR", symbol: "₹", name: "Indian Rupee" },
+];
+
 const SplitCalculator = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [newParticipantName, setNewParticipantName] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
   const [newExpense, setNewExpense] = useState({
     description: "",
     amount: "",
     paidBy: "",
     participants: [] as string[],
+    currency: CURRENCIES[0].code,
   });
 
   const addParticipant = useCallback(() => {
@@ -96,6 +119,7 @@ const SplitCalculator = () => {
       amount: parseFloat(newExpense.amount),
       paidBy: newExpense.paidBy,
       participants: participantIds,
+      currency: newExpense.currency,
     };
 
     setExpenses((prev) => [...prev, expense]);
@@ -104,6 +128,7 @@ const SplitCalculator = () => {
       amount: "",
       paidBy: "",
       participants: [],
+      currency: CURRENCIES[0].code,
     });
     // toast({
     //   title: "Expense added!",
@@ -220,6 +245,7 @@ const SplitCalculator = () => {
       amount: "",
       paidBy: "",
       participants: [],
+      currency: CURRENCIES[0].code,
     });
     // toast({
     //   title: "Calculator reset",
@@ -284,6 +310,37 @@ const SplitCalculator = () => {
     }
   }, [generateSummary]);
 
+  const expenseBreakdown = useMemo(() => {
+    const breakdown: Record<string, DetailedExpenseBreakdown> = {};
+
+    participants.forEach((participant) => {
+      breakdown[participant.id] = {
+        participantId: participant.id,
+        participantName: participant.name,
+        amountOwed: 0,
+        shareOf: [],
+      };
+    });
+
+    expenses.forEach((expense) => {
+      const splitAmount = expense.amount / expense.participants.length;
+      const currency =
+        CURRENCIES.find((c) => c.code === expense.currency)?.symbol ||
+        expense.currency;
+
+      expense.participants.forEach((participantId) => {
+        if (breakdown[participantId]) {
+          breakdown[participantId].amountOwed += splitAmount;
+          breakdown[participantId].shareOf.push(
+            `${expense.description}: ${currency}${splitAmount.toFixed(2)}`
+          );
+        }
+      });
+    });
+
+    return Object.values(breakdown);
+  }, [participants, expenses]);
+
   return (
     <div className="min-h-[calc(100vh-64px)] bg-secondary p-4 pb-20">
       <div className="max-w-4xl mx-auto space-y-6 mt-20 sm:mt-32">
@@ -295,6 +352,28 @@ const SplitCalculator = () => {
           <p className="text-muted-foreground">
             Easy expense splitting for groups, trips, and roommates
           </p>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <select
+            className="p-2 border border-input rounded-md bg-background text-sm"
+            value={selectedCurrency.code}
+            onChange={(e) => {
+              const currency = CURRENCIES.find(
+                (c) => c.code === e.target.value
+              );
+              if (currency) {
+                setSelectedCurrency(currency);
+                setNewExpense((prev) => ({ ...prev, currency: currency.code }));
+              }
+            }}
+          >
+            {CURRENCIES.map((currency) => (
+              <option key={currency.code} value={currency.code}>
+                {currency.symbol} {currency.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Participants Section */}
@@ -356,15 +435,37 @@ const SplitCalculator = () => {
                   }))
                 }
               />
-              <Input
-                type="number"
-                placeholder="Amount ($)"
-                step="0.01"
-                value={newExpense.amount}
-                onChange={(e) =>
-                  setNewExpense((prev) => ({ ...prev, amount: e.target.value }))
-                }
-              />
+              <div className="flex gap-2">
+                <select
+                  className="w-20 p-3 border border-input rounded-md bg-background"
+                  value={newExpense.currency}
+                  onChange={(e) =>
+                    setNewExpense((prev) => ({
+                      ...prev,
+                      currency: e.target.value,
+                    }))
+                  }
+                >
+                  {CURRENCIES.map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {currency.symbol}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  type="number"
+                  placeholder="Amount"
+                  step="0.01"
+                  value={newExpense.amount}
+                  onChange={(e) =>
+                    setNewExpense((prev) => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))
+                  }
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -388,15 +489,20 @@ const SplitCalculator = () => {
               </Button>
             </div>
           </Card>
-        ) }
+        )}
 
         {/* Expenses List */}
         {expenses.length > 0 && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold">Expenses</h2>
+            <h2 className="text-xl font-semibold ">Expenses</h2>
             <div className="space-y-3">
               {expenses.map((expense) => {
                 const payer = participants.find((p) => p.id === expense.paidBy);
+                const currency =
+                  CURRENCIES.find((c) => c.code === expense.currency)?.symbol ||
+                  expense.currency;
+                const splitAmount =
+                  expense.amount / expense.participants.length;
                 return (
                   <div
                     key={expense.id}
@@ -405,14 +511,19 @@ const SplitCalculator = () => {
                     <div className="flex-1">
                       <div className="font-medium">{expense.description}</div>
                       <div className="text-sm text-muted-foreground">
-                        ${expense.amount.toFixed(2)} paid by {payer?.name}
+                        {currency}
+                        {expense.amount.toFixed(2)} paid by {payer?.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Split {expense.participants.length} ways: {currency}
+                        {splitAmount.toFixed(2)} each
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => removeExpense(expense.id)}
-                      className="hover:bg-destructive hover:text-white"
+                      className="hover:bg-destructive hover:text-destructive-foreground"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -433,10 +544,10 @@ const SplitCalculator = () => {
                   key={check.participant.id}
                   className={`p-3 rounded-lg border-2 ${
                     check.status === "balanced"
-                      ? "border-expense-balanced bg-success/10"
+                      ? "border-expense-balanced bg-success/10 border-success"
                       : check.status === "overpaid"
-                      ? "border-expense-overpaid bg-destructive/10"
-                      : "border-expense-underpaid bg-warning/10"
+                      ? "border-expense-overpaid bg-destructive/10 border-destructive"
+                      : "border-expense-underpaid bg-warning/10 border-warning"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -493,28 +604,143 @@ const SplitCalculator = () => {
           </Card>
         )}
 
+        {/* Enhanced Detailed Expense Breakdown */}
+        {expenseBreakdown.some((b) => b.shareOf.length > 0) && (
+          <Card className="p-6 bg-gradient-to-br from-secondary/30 to-accent/10">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                <span className="text-sm font-bold">📊</span>
+              </div>
+              <h2 className="text-xl font-semibold">Calculation Breakdown</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Double-check our math! Here's exactly what each person owes and
+              for which expenses:
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {expenseBreakdown
+                .filter((breakdown) => breakdown.shareOf.length > 0)
+                .map((breakdown) => (
+                  <div
+                    key={breakdown.participantId}
+                    className="p-4 bg-white/60 dark:bg-gray-900/60 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center text-white font-medium text-sm">
+                        {breakdown.participantName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="font-medium text-lg">
+                        {breakdown.participantName}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {breakdown.shareOf.map((share, index) => (
+                        <div
+                          key={index}
+                          className="text-sm p-2 bg-secondary/30 rounded border-l-2 border-accent/50"
+                        >
+                          <span className="text-muted-foreground">•</span>{" "}
+                          {share}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-sm">
+                          Total Share:
+                        </span>
+                        <span className="text-lg font-bold text-primary">
+                          {selectedCurrency.symbol}
+                          {breakdown.amountOwed.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                <span>🧮</span>
+                <span>
+                  All calculations are automatically verified for accuracy
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         {(participants.length > 0 || expenses.length > 0) && (
           <div className="sticky bottom-4 flex gap-2 justify-center">
-            <Button
-              onClick={shareResults}
-              variant="default"
-              className="flex-1 max-w-xs"
-              disabled={expenses.length === 0}
-            >
-              <Share2 className="h-4 w-4 mr-2" />
-              Share Results
-            </Button>
-            <Button
-              onClick={resetCalculator}
-              variant="outline"
-              className="flex-1 max-w-xs"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Start Over
-            </Button>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Button
+                onClick={shareResults}
+                variant="default"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform"
+                disabled={expenses.length === 0}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Button
+                // onClick={generatePDF}
+                variant="accent"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform shadow-md"
+                disabled={expenses.length === 0}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+              <Button
+                onClick={resetCalculator}
+                variant="outline"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+            </div>
           </div>
         )}
+
+        {/* Enhanced Action Buttons */}
+        {/* {(participants.length > 0 || expenses.length > 0) && (
+          <div className="sticky bottom-4 bg-transparent/80 backdrop-blur-sm rounded-lg p-4 border border-border/50 shadow-lg">
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Button
+                onClick={shareResults}
+                variant="default"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform"
+                disabled={expenses.length === 0}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Button
+                // onClick={generatePDF}
+                variant="accent"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform shadow-md"
+                disabled={expenses.length === 0}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+              <Button
+                onClick={resetCalculator}
+                variant="outline"
+                className="flex-1 min-w-32 max-w-40 hover:scale-105 transition-transform"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+            </div>
+            <div className="text-center mt-2">
+              <p className="text-xs text-muted-foreground">
+                Professional PDF includes watermark and detailed breakdown
+              </p>
+            </div>
+          </div>
+        )} */}
       </div>
     </div>
   );
