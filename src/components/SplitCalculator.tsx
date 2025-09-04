@@ -437,7 +437,7 @@ const SplitCalculator = () => {
               />
               <div className="flex gap-2">
                 <select
-                  className="w-20 p-3 border border-input rounded-md bg-background"
+                  className="w-20 h-10 p-1 border border-input rounded-md bg-background"
                   value={newExpense.currency}
                   onChange={(e) =>
                     setNewExpense((prev) => ({
@@ -579,7 +579,13 @@ const SplitCalculator = () => {
         {/* Settlement Summary */}
         {settlements.settlements.length > 0 && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold">💸 Who Owes Whom</h2>
+            {/* <h2 className="text-xl font-semibold">💸 Who Owes Whom</h2> */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-sm font-bold">💸</span>
+              </div>
+              <h2 className="text-xl font-semibold">Who Owes Whom</h2>
+            </div>
             <div className="space-y-3">
               {settlements.settlements.map((settlement, index) => {
                 const from = participants.find((p) => p.id === settlement.from);
@@ -606,7 +612,8 @@ const SplitCalculator = () => {
 
         {/* Enhanced Detailed Expense Breakdown */}
         {expenseBreakdown.some((b) => b.shareOf.length > 0) && (
-          <Card className="p-6 bg-gradient-to-br from-secondary/30 to-accent/10">
+          // <Card className="p-6 bg-gradient-to-br from-secondary/30 to-accent/10">
+          <Card className="p-6 bg-background">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
                 <span className="text-sm font-bold">📊</span>
