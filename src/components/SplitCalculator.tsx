@@ -614,7 +614,7 @@ const SplitCalculator = () => {
               <h2 className="text-xl font-semibold">Calculation Breakdown</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Double-check our math! Here's exactly what each person owes and
+              Double-check our math! Here&apos;s exactly what each person owes and
               for which expenses:
             </p>
             <div className="grid gap-4 md:grid-cols-2">
